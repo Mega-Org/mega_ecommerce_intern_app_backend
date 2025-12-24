@@ -1,6 +1,8 @@
 const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 
+const path = require('path');
+
 const options = {
     definition: {
         openapi: '3.0.0',
@@ -13,6 +15,10 @@ const options = {
             },
         },
         servers: [
+            {
+                url: 'https://mega-ecommerce-intern-app-backend.vercel.app',
+                description: 'Production server',
+            },
             {
                 url: 'http://localhost:3000',
                 description: 'Development server',
@@ -29,7 +35,7 @@ const options = {
         },
         security: [{ bearerAuth: [] }],
     },
-    apis: ['./src/routes/*.js'], // Path to the API docs
+    apis: [path.join(__dirname, '../routes/*.js')], // Absolute path for Vercel
 };
 
 const specs = swaggerJsdoc(options);
