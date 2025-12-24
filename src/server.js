@@ -8,7 +8,13 @@ connectDB();
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    swaggerDocs(app);
-});
+// Only start the server if this file is run directly (local development)
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+        swaggerDocs(app);
+    });
+}
+
+// Export the app for Vercel (Serverless)
+module.exports = app;
