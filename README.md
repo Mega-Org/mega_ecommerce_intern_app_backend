@@ -5,7 +5,7 @@ A complete Node.js/Express REST API backend for a Flutter E-commerce application
 
 - **Deployment**:
     - **Live API**: [https://mega-ecommerce-intern-app-backend.vercel.app](https://mega-ecommerce-intern-app-backend.vercel.app)
-    - **Documentation**: [https://mega-ecommerce-intern-app-backend.vercel.app/api-docs](https://mega-ecommerce-intern-app-backend.vercel.app/api-docs)
+    - **Documentation**: [https://mega155-ecommerce-app-backend.vercel.app/api-docs/](https://mega-ecommerce-intern-app-backend.vercel.app/api-docs)
     - **CI/CD**: Auto-deploys from `main` branch via Vercel.
 
 ## 🚀 Features

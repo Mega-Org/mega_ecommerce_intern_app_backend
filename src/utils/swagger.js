@@ -9,14 +9,16 @@ const options = {
         info: {
             title: 'Mega Ecommerce API',
             version: '1.0.0',
-            description: 'API for a Flutter Ecommerce App',
+            description: 'API for a Flutter Ecommerce App Made by Eng. Magdy Ebrahim Ali',
             contact: {
-                name: 'Developer',
+                name: 'Eng. Magdy Ebrahim Ali',
+                email: 'magdyebrahim155@gmail.com',
+                url: 'https://github.com/magdyebrahim24'
             },
         },
         servers: [
             {
-                url: 'https://mega-ecommerce-intern-app-backend.vercel.app',
+                url: 'https://mega155-ecommerce-app-backend.vercel.app',
                 description: 'Production server',
             },
             {
