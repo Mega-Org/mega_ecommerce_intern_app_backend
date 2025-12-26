@@ -4,7 +4,8 @@ const connectDB = require('./config/db');
 const swaggerDocs = require('./utils/swagger');
 
 // Connect to Database
-connectDB();
+// connectDB() is now handled in app.js middleware to ensure connection before handling requests
+// connectDB();
 
 const PORT = process.env.PORT || 3000;
 

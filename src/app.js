@@ -10,8 +10,17 @@ const app = express();
 
 // Connect Database
 // Note: We'll call this in server.js or directly here. 
-// Calling here is fine, but usually kept in server.js to separate server start logic.
-// Leaving it out here to be called in server.js
+// Use middleware to ensure DB connection is established before processing requests
+// This prevents "buffering timed out" issues in serverless environments
+app.use(async (req, res, next) => {
+    try {
+        await connectDB();
+        next();
+    } catch (err) {
+        console.error('Database connection failed in middleware:', err);
+        next(err);
+    }
+});
 
 // Middleware
 app.use(express.json({ extended: false })); // Parse JSON bodies
