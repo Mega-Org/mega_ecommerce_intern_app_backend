@@ -25,16 +25,24 @@ if (isCloudinaryConfigured) {
         }
     });
 } else {
-    // Fallback to local storage
-    console.log('Using Local Storage for uploads (Cloudinary keys not set)');
-    storage = multer.diskStorage({
-        destination(req, file, cb) {
-            cb(null, 'uploads/');
-        },
-        filename(req, file, cb) {
-            cb(null, `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`);
-        },
-    });
+    // Fallback options
+    if (process.env.NODE_ENV === 'development') {
+        // Use local storage for development
+        console.log('Using Local Storage for uploads (Cloudinary keys not set)');
+        storage = multer.diskStorage({
+            destination(req, file, cb) {
+                cb(null, 'uploads/');
+            },
+            filename(req, file, cb) {
+                cb(null, `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`);
+            },
+        });
+    } else {
+        // Use memory storage for production/serverless if Cloudinary is missing
+        // This prevents "ReadOnly" errors on Vercel, though the image won't be persisted
+        console.log('Using Memory Storage (Cloudinary keys not set & not in dev)');
+        storage = multer.memoryStorage();
+    }
 }
 
 const upload = multer({ storage: storage });

@@ -19,7 +19,17 @@ exports.register = async (req, res) => {
 
         // If file uploaded (requires upload middleware on route)
         if (req.file) {
-            avatar = req.file.path;
+            // Cloudinary: req.file.path is URL
+            // Disk Storage: req.file.path is local path
+            // Memory Storage (fallback): req.file.path is undefined, buffer exists
+            if (req.file.path) {
+                avatar = req.file.path;
+            } else {
+                // If using memory storage fallback, we can't save the file easily without an external service
+                // So we keep the default avatar (or whatever was passed in body)
+                // Optionally log this case
+                console.log('File uploaded to memory but not saved (no Cloudinary config). Using default avatar.');
+            }
         }
 
         // Check if user exists
