@@ -21,7 +21,11 @@ if (isCloudinaryConfigured) {
         params: {
             folder: 'mega-ecommerce',
             allowed_formats: ['jpg', 'png', 'jpeg', 'webp'],
-            transformation: [{ width: 500, height: 500, crop: 'limit' }]
+            transformation: [{ width: 500, height: 500, crop: 'limit' }],
+            public_id: (req, file) => {
+                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+                return file.fieldname + '-' + uniqueSuffix;
+            }
         }
     });
 } else {

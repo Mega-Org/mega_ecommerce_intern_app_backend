@@ -79,7 +79,7 @@ router.post('/signup', upload.single('avatar'), register);
  *       200:
  *         description: Login success
  */
-router.post('/login', login);
+router.post('/login', upload.none(), login);
 
 /**
  * @swagger

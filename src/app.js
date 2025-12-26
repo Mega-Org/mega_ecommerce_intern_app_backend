@@ -24,6 +24,7 @@ app.use(async (req, res, next) => {
 
 // Middleware
 app.use(express.json({ extended: false })); // Parse JSON bodies
+app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies (form data)
 app.use(cors()); // Enable CORS
 
 // Serve static files (uploads)
