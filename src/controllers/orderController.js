@@ -15,7 +15,22 @@ exports.getCart = async (req, res) => {
         if (!cart) {
             cart = await Cart.create({ user: req.user._id, cartItems: [] });
         }
-        res.json(cart);
+
+        // Transform image URLs
+        const cartObj = cart.toObject();
+        if (cartObj.cartItems && cartObj.cartItems.length > 0) {
+            const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+            const host = req.get('host');
+
+            cartObj.cartItems = cartObj.cartItems.map(item => {
+                if (item.image && !item.image.startsWith('http')) {
+                    item.image = `${protocol}://${host}/${item.image}`;
+                }
+                return item;
+            });
+        }
+
+        res.json(cartObj);
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -134,7 +149,20 @@ exports.createOrder = async (req, res) => {
         // Notify Admin/Owner (Optional log or real notification)
         // console.log(`New Order: ${createdOrder._id}`);
 
-        res.status(201).json(createdOrder);
+        const orderObj = createdOrder.toObject();
+        if (orderObj.orderItems) {
+            const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+            const host = req.get('host');
+            orderObj.orderItems = orderObj.orderItems.map(item => {
+                if (item.image && !item.image.startsWith('http')) {
+                    item.image = `${protocol}://${host}/${item.image}`;
+                }
+                return item;
+            });
+        }
+        res.status(201).json(orderObj);
+
+
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -145,7 +173,23 @@ exports.createOrder = async (req, res) => {
 // @access  Private
 exports.getMyOrders = async (req, res) => {
     try {
-        const orders = await Order.find({ user: req.user._id }).sort({ createdAt: -1 });
+        const ordersDocs = await Order.find({ user: req.user._id }).sort({ createdAt: -1 });
+
+        const orders = ordersDocs.map(order => {
+            const o = order.toObject();
+            if (o.orderItems) {
+                const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+                const host = req.get('host');
+                o.orderItems = o.orderItems.map(item => {
+                    if (item.image && !item.image.startsWith('http')) {
+                        item.image = `${protocol}://${host}/${item.image}`;
+                    }
+                    return item;
+                });
+            }
+            return o;
+        });
+
         res.json(orders);
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });

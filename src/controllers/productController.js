@@ -19,9 +19,24 @@ exports.getProducts = async (req, res) => {
             : {};
 
         const count = await Product.countDocuments({ ...keyword });
-        const products = await Product.find({ ...keyword })
+        const productsDocs = await Product.find({ ...keyword })
             .limit(pageSize)
             .skip(pageSize * (page - 1));
+
+        const products = productsDocs.map(product => {
+            const p = product.toObject();
+            if (p.image && !p.image.startsWith('http')) {
+                const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+                const host = req.get('host');
+                p.image = `${protocol}://${host}/${p.image}`;
+            }
+            if (p.images && p.images.length > 0) {
+                const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+                const host = req.get('host');
+                p.images = p.images.map(img => img.startsWith('http') ? img : `${protocol}://${host}/${img}`);
+            }
+            return p;
+        });
 
         res.json({ products, page, pages: Math.ceil(count / pageSize) });
     } catch (error) {
@@ -37,7 +52,29 @@ exports.getProductById = async (req, res) => {
         const product = await Product.findById(req.params.id).populate('reviews.user', 'name avatar');
 
         if (product) {
-            res.json(product);
+            const p = product.toObject();
+            if (p.image && !p.image.startsWith('http')) {
+                const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+                const host = req.get('host');
+                p.image = `${protocol}://${host}/${p.image}`;
+            }
+            if (p.images && p.images.length > 0) {
+                const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+                const host = req.get('host');
+                p.images = p.images.map(img => img.startsWith('http') ? img : `${protocol}://${host}/${img}`);
+            }
+            // Also reviews avatars if any
+            if (p.reviews) {
+                const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+                const host = req.get('host');
+                p.reviews = p.reviews.map(r => {
+                    if (r.user && r.user.avatar && !r.user.avatar.startsWith('http')) {
+                        r.user.avatar = `${protocol}://${host}/${r.user.avatar}`;
+                    }
+                    return r;
+                });
+            }
+            res.json(p);
         } else {
             res.status(404).json({ success: false, message: 'Product not found' });
         }
@@ -174,7 +211,16 @@ exports.toggleFavorite = async (req, res) => {
 // @access  Private
 exports.getUserFavorites = async (req, res) => {
     try {
-        const products = await Product.find({ favorites: req.user._id });
+        const productsDocs = await Product.find({ favorites: req.user._id });
+        const products = productsDocs.map(product => {
+            const p = product.toObject();
+            if (p.image && !p.image.startsWith('http')) {
+                const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+                const host = req.get('host');
+                p.image = `${protocol}://${host}/${p.image}`;
+            }
+            return p;
+        });
         res.json({ success: true, data: products });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });

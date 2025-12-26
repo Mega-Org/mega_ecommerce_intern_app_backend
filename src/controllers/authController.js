@@ -48,13 +48,22 @@ exports.register = async (req, res) => {
         });
 
         if (user) {
+            // Construct full avatar URL
+            let avatarUrl = user.avatar;
+            if (user.avatar && !user.avatar.startsWith('http')) {
+                // Determine protocol (x-forwarded-proto is set by Vercel/proxies)
+                const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+                const host = req.get('host');
+                avatarUrl = `${protocol}://${host}/${user.avatar}`;
+            }
+
             res.status(201).json({
                 success: true,
                 data: {
                     _id: user._id,
                     name: user.name,
                     email: user.email,
-                    avatar: user.avatar,
+                    avatar: avatarUrl,
                     role: user.role,
                     isVerified: user.isVerified,
                     token: generateToken(user._id),
@@ -86,13 +95,21 @@ exports.login = async (req, res) => {
         if (user && (await user.matchPassword(password))) {
             const userData = await User.findById(user._id).select('-password');
 
+            // Construct full avatar URL
+            let avatarUrl = user.avatar;
+            if (user.avatar && !user.avatar.startsWith('http')) {
+                const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+                const host = req.get('host');
+                avatarUrl = `${protocol}://${host}/${user.avatar}`;
+            }
+
             res.json({
                 success: true,
                 data: {
                     _id: user._id,
                     name: user.name,
                     email: user.email,
-                    avatar: user.avatar,
+                    avatar: avatarUrl,
                     role: user.role,
                     isVerified: user.isVerified,
                     token: generateToken(user._id),

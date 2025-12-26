@@ -7,9 +7,18 @@ exports.getProfile = async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
         if (user) {
+            const userData = user.toObject();
+
+            // Construct full avatar URL
+            if (userData.avatar && !userData.avatar.startsWith('http')) {
+                const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+                const host = req.get('host');
+                userData.avatar = `${protocol}://${host}/${userData.avatar}`;
+            }
+
             res.json({
                 success: true,
-                data: user
+                data: userData
             });
         } else {
             res.status(404).json({ success: false, message: 'User not found' });
@@ -29,16 +38,28 @@ exports.updateProfile = async (req, res) => {
         if (user) {
             user.name = req.body.name || user.name;
             if (req.file) {
-                user.avatar = req.file.path;
+                if (req.file.path) {
+                    user.avatar = req.file.path;
+                } else {
+                    console.log('Update Profile: File in memory but no path (Cloudinary missing). Keeping old avatar.');
+                }
             } else if (req.body.avatar) {
                 user.avatar = req.body.avatar;
             }
 
             const updatedUser = await user.save();
+            const userData = updatedUser.toObject();
+
+            // Construct full avatar URL
+            if (userData.avatar && !userData.avatar.startsWith('http')) {
+                const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+                const host = req.get('host');
+                userData.avatar = `${protocol}://${host}/${userData.avatar}`;
+            }
 
             res.json({
                 success: true,
-                data: updatedUser
+                data: userData
             });
         } else {
             res.status(404).json({ success: false, message: 'User not found' });
