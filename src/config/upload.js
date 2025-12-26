@@ -26,8 +26,12 @@ if (isCloudinaryConfigured) {
     });
 } else {
     // Fallback options
-    if (process.env.NODE_ENV === 'development') {
-        // Use local storage for development
+    // Fallback options
+    // Check for Vercel environment explicitly or Production
+    const isServerless = process.env.VERCEL || process.env.NODE_ENV === 'production';
+
+    if (!isServerless) {
+        // Use local storage ONLY for local development (not on Vercel)
         console.log('Using Local Storage for uploads (Cloudinary keys not set)');
         storage = multer.diskStorage({
             destination(req, file, cb) {
@@ -39,8 +43,8 @@ if (isCloudinaryConfigured) {
         });
     } else {
         // Use memory storage for production/serverless if Cloudinary is missing
-        // This prevents "ReadOnly" errors on Vercel, though the image won't be persisted
-        console.log('Using Memory Storage (Cloudinary keys not set & not in dev)');
+        // This prevents "ReadOnly" errors on Vercel
+        console.log('Using Memory Storage (Cloudinary keys not set & Serverless env detected)');
         storage = multer.memoryStorage();
     }
 }

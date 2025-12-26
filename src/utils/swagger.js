@@ -9,7 +9,7 @@ const options = {
         info: {
             title: 'Mega Ecommerce API',
             version: '1.0.0',
-            description: 'API for a Flutter Ecommerce App Made by Eng. Magdy Ebrahim Ali',
+            description: 'API for a Flutter Ecommerce App For Internship Project',
             contact: {
                 name: 'Eng. Magdy Ebrahim Ali',
                 email: 'magdyebrahim155@gmail.com',
