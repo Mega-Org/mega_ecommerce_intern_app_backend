@@ -116,7 +116,7 @@ exports.login = async (req, res) => {
                 },
             });
         } else {
-            res.status(401).json({ success: false, message: 'Invalid credentials' });
+            res.status(400).json({ success: false, message: 'Invalid credentials' });
         }
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -218,6 +218,32 @@ exports.forgotPassword = async (req, res) => {
         console.log(`Reset code for ${user.email}: ${resetToken}`);
 
         res.status(200).json({ success: true, message: 'Reset code sent' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// @desc    Verify Reset Code
+// @route   POST /api/auth/verify-pass-code
+// @access  Public
+exports.verifyResetCode = async (req, res) => {
+    try {
+        const { email, code } = req.body;
+
+        const user = await User.findOne({
+            email,
+            resetPasswordToken: code,
+            resetPasswordExpire: { $gt: Date.now() }
+        });
+
+        if (!user) {
+            // Also check if code is the static '1234' depending on flow, 
+            // but the plan says match valid code '1234' with logic.
+            // If the saved token IS '1234', the above query works.
+            return res.status(400).json({ success: false, message: 'Invalid code or expired' });
+        }
+
+        res.status(200).json({ success: true, message: 'Code verified successfully' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

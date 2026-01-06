@@ -13,6 +13,7 @@ const {
     verifyEmail,
     forgotPassword,
     resetPassword,
+    verifyResetCode,
     logout,
     deleteAccount
 } = require('../controllers/authController');
@@ -138,6 +139,33 @@ router.post('/verify-email', protect, verifyEmail);
  *         description: Code sent
  */
 router.post('/forgot-password', forgotPassword);
+
+/**
+ * @swagger
+ * /api/auth/verify-pass-code:
+ *   post:
+ *     summary: Verify reset password code
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - code
+ *             properties:
+ *               email:
+ *                 type: string
+ *               code:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Code verified
+ */
+router.post('/verify-pass-code', verifyResetCode);
+
 
 /**
  * @swagger
