@@ -12,8 +12,7 @@
 
 ### 📚 Documentation Links
 1.  **Swagger UI (Visual Documentation)**:
-        [Tap Me](https://mega66-1484.postman.co/workspace/Mega-Workspace~9b99e0e5-50c3-45ae-813f-9881b120449c/collection/15518880-e33c5b61-bd85-436a-9897-be13da06e1df?action=share&creator=15518880&active-environment=15518880-48d8a64b-2258-4ccc-b728-01a9ee0da6b6](https://mega155-ecommerce-app-backend.vercel.app/api-docs/#/))
-    [[https://mega155-ecommerce-app-backend.vercel.app/api-docs]([https://mega155-ecommerce-app-backend.vercel.app/api-docs))
+   [Tap Me](https://mega155-ecommerce-app-backend.vercel.app/api-docs/#/)
     *Use this to visually explore all endpoints, schemas, and try out requests directly in the browser.*
 
 3.  **Postman Collection**:  
