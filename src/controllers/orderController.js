@@ -15,7 +15,7 @@ const formatCartItem = (item, req) => {
 
     // Use the standard formatter for product
     if (productObj) {
-        productObj = formatProduct(productObj, req);
+        productObj = formatProduct(productObj, req, { excludeReviews: true });
     }
 
     return {
@@ -235,8 +235,14 @@ exports.getMyOrders = async (req, res) => {
         const pageSize = Number(req.query.limit) || 10;
         const page = Number(req.query.page) || 1;
 
-        const count = await Order.countDocuments({ user: req.user._id });
-        const ordersDocs = await Order.find({ user: req.user._id })
+        // Filter by user and optional status
+        const filter = { user: req.user._id };
+        if (req.query.status) {
+            filter.status = req.query.status;
+        }
+
+        const count = await Order.countDocuments(filter);
+        const ordersDocs = await Order.find(filter)
             .sort({ createdAt: -1 })
             .limit(pageSize)
             .skip(pageSize * (page - 1));
@@ -244,13 +250,28 @@ exports.getMyOrders = async (req, res) => {
         const orders = ordersDocs.map(order => {
             const o = order.toObject();
             if (o.orderItems) {
+                // orderItems[i].product might be just ID if not populated, OR object if populated
+                // But wait, order items schema stores simplified data usually (name, image, price).
+                // However, user asked for "items or products that returns is same response as product data".
+                // The schema for `orderItems` usually has { product: ObjectId, name, image, price, qty }.
+                // If we want FULL product data, we need to populate `orderItems.product`.
+                // But typically previous orders store snapshot. 
+                // User request: "make sure items or products that returns is same response as product data in products service"
+
+                // Let's format the image at least using formatImage as before, 
+                // If `product` is populated, we could format it. 
+                // Currently `getMyOrders` doesn't populate `orderItems.product`.
+
+                const { formatImage } = require('../utils/formatResource');
                 const protocol = req.headers['x-forwarded-proto'] || req.protocol;
                 const host = req.get('host');
+
                 o.orderItems = o.orderItems.map(item => {
-                    if (item.image && !item.image.startsWith('http')) {
-                        item.image = `${protocol}://${host}/${item.image}`;
+                    const newItem = { ...item };
+                    if (newItem.image) {
+                        newItem.image = formatImage(newItem.image, req);
                     }
-                    return item;
+                    return newItem;
                 });
             }
             return o;
@@ -262,6 +283,56 @@ exports.getMyOrders = async (req, res) => {
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
+};
+
+// @desc    Get Order by ID
+// @route   GET /api/orders/:id
+// @access  Private
+exports.getOrderById = async (req, res) => {
+    try {
+        const order = await Order.findById(req.params.id).populate('user', 'name email');
+
+        if (order) {
+            // Check permissions (admin or owner)
+            if (req.user.role !== 'admin' && order.user._id.toString() !== req.user._id.toString()) {
+                return res.status(403).json({ success: false, message: 'Not authorized to view this order' });
+            }
+
+            const o = order.toObject();
+            if (o.orderItems) {
+                const { formatImage } = require('../utils/formatResource');
+                o.orderItems = o.orderItems.map(item => {
+                    const newItem = { ...item };
+                    if (newItem.image) {
+                        newItem.image = formatImage(newItem.image, req);
+                    }
+                    return newItem;
+                });
+            }
+
+            res.json(o);
+        } else {
+            res.status(404).json({ success: false, message: 'Order not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// @desc    Get Order Statuses
+// @route   GET /api/orders/statuses
+// @access  Public (or Private, usually public for filter UI)
+exports.getOrderStatuses = (req, res) => {
+    // Enum values from Order model
+    const statuses = ['Pending', 'Processing', 'Delivered', 'Cancelled'];
+
+    // Format as requested: { name, value }
+    const formattedStatuses = statuses.map(status => ({
+        name: status,
+        value: status
+    }));
+
+    res.json(formattedStatuses);
 };
 
 // --- NOTIFICATION CONTROLLERS ---

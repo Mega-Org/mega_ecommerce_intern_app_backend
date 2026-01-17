@@ -16,6 +16,8 @@ const {
     removeFromCart,
     createOrder,
     getMyOrders,
+    getOrderById,
+    getOrderStatuses,
     getNotifications
 } = require('../controllers/orderController');
 const { protect } = require('../middleware/auth');
@@ -122,13 +124,19 @@ router.post('/checkout', protect, createOrder);
  *         schema:
  *           type: integer
  *         description: Items per page (default 10)
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [Pending, Processing, Delivered, Cancelled]
+ *         description: Filter by order status
  *     responses:
  *       200:
  *         description: List of orders
  */
 router.get('/myorders', protect, getMyOrders);
 
-// Notification Routes
+// Notification Routes (Must be before /:id)
 /**
  * @swagger
  * /api/orders/notifications:
@@ -142,5 +150,37 @@ router.get('/myorders', protect, getMyOrders);
  *         description: List of notifications
  */
 router.get('/notifications', protect, getNotifications);
+
+/**
+ * @swagger
+ * /api/orders/statuses:
+ *   get:
+ *     summary: Get order statuses
+ *     tags: [Orders]
+ *     responses:
+ *       200:
+ *         description: List of order statuses
+ */
+router.get('/statuses', getOrderStatuses);
+
+/**
+ * @swagger
+ * /api/orders/{id}:
+ *   get:
+ *     summary: Get order details
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Order object
+ */
+router.get('/:id', protect, getOrderById);
 
 module.exports = router;

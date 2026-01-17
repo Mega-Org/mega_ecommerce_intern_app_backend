@@ -180,7 +180,9 @@ exports.createProductReview = async (req, res) => {
 // @access  Private
 exports.toggleFavorite = async (req, res) => {
     try {
-        let product = await Product.findById(req.params.id).populate('owner', 'name avatar rating');
+        let product = await Product.findById(req.params.id)
+            .populate('owner', 'name avatar rating')
+            .populate('reviews.user', 'name avatar');
 
         if (product) {
             const isFavorite = product.favorites.includes(req.user._id);
@@ -197,10 +199,8 @@ exports.toggleFavorite = async (req, res) => {
 
             await product.save();
 
-            // Return updated product formatted
-            // We need to re-format it. 
-            // Note: favorites array is modified in memory, so formatProduct will see it.
-            const formatted = formatProduct(product, req, { excludeReviews: true });
+            // Now including reviews
+            const formatted = formatProduct(product, req, { excludeReviews: false });
 
             res.json({
                 success: true,
