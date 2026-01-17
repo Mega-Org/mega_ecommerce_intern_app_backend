@@ -21,6 +21,11 @@ const protect = async (req, res, next) => {
             // Get user from the token
             req.user = await User.findById(decoded.id).select('-password');
 
+            // Check Token Version
+            if (!req.user || (decoded.tokenVersion !== undefined && decoded.tokenVersion !== (req.user.tokenVersion || 0))) {
+                return res.status(401).json({ success: false, message: 'Not authorized, token expired' });
+            }
+
             next();
         } catch (error) {
             console.error(error);
@@ -46,6 +51,11 @@ const optionalProtect = async (req, res, next) => {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             req.tokenPayload = decoded;
             req.user = await User.findById(decoded.id).select('-password');
+
+            // Check Token Version
+            if (req.user && decoded.tokenVersion !== undefined && decoded.tokenVersion !== (req.user.tokenVersion || 0)) {
+                req.user = null; // Treat as guest
+            }
         } catch (error) {
             console.error('Optional Auth Error:', error.message);
             // Don't fail, just don't attach user

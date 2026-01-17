@@ -40,6 +40,7 @@ const options = {
             { name: 'Auth - Registration', description: 'User registration & verification' },
             { name: 'Auth - Session', description: 'Login & session management' },
             { name: 'Auth - Password Reset', description: 'Password recovery flow' },
+            { name: 'Auth - Update Email', description: 'Update email flow' },
             { name: 'Users', description: 'User profile management' },
             { name: 'Products', description: 'Product management' },
             { name: 'Favorites', description: 'User favorites' },

@@ -138,13 +138,40 @@ exports.verifyEmailUpdate = async (req, res) => {
             user.email = user.pendingEmail;
             user.pendingEmail = undefined;
             user.verificationCode = undefined;
-            user.isVerified = true; // Assuming new email is verified by this act
+            user.isVerified = true;
+
+            // Invalidate tokens
+            user.tokenVersion = (user.tokenVersion || 0) + 1;
+
             await user.save();
-            res.json({ success: true, message: 'Email updated successfully' });
+            res.json({ success: true, message: 'Email updated successfully. Please login again.' });
         } else {
             res.status(400).json({ success: false, message: 'No pending email update found' });
         }
 
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// @desc    Update Email Step 3: Resend Code
+// @route   POST /api/users/update-email/resend
+// @access  Private
+exports.resendEmailUpdateCode = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+
+        if (!user.pendingEmail) {
+            return res.status(400).json({ success: false, message: 'No pending email update found' });
+        }
+
+        // Resend code (Static 1234 for now)
+        user.verificationCode = '1234';
+        user.verificationCodeExpire = Date.now() + 10 * 60 * 1000;
+
+        await user.save({ validateBeforeSave: false });
+
+        res.json({ success: true, message: 'Verification code resent' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

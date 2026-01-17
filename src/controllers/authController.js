@@ -3,8 +3,8 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
 // Generate JWT
-const generateToken = (id) => {
-    return jwt.sign({ id }, process.env.JWT_SECRET, {
+const generateToken = (user) => {
+    return jwt.sign({ id: user._id, tokenVersion: user.tokenVersion || 0 }, process.env.JWT_SECRET, {
         expiresIn: '30d',
     });
 };
@@ -66,7 +66,7 @@ exports.register = async (req, res) => {
                     avatar: avatarUrl,
                     role: user.role,
                     isVerified: user.isVerified,
-                    token: generateToken(user._id),
+                    token: generateToken(user),
                 },
             });
         } else {
@@ -112,7 +112,7 @@ exports.login = async (req, res) => {
                     avatar: avatarUrl,
                     role: user.role,
                     isVerified: user.isVerified,
-                    token: generateToken(user._id),
+                    token: generateToken(userData),
                 },
             });
         } else {

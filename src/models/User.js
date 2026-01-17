@@ -15,6 +15,13 @@ const userSchema = new mongoose.Schema({
             'Please add a valid email'
         ]
     },
+    pendingEmail: {
+        type: String,
+        match: [
+            /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
+            'Please add a valid email'
+        ]
+    },
     password: {
         type: String,
         required: [true, 'Please add a password'],
@@ -57,6 +64,10 @@ const userSchema = new mongoose.Schema({
     createdAt: {
         type: Date,
         default: Date.now
+    },
+    tokenVersion: {
+        type: Number,
+        default: 0
     }
 });
 

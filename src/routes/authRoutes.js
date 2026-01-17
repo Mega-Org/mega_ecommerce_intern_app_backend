@@ -91,7 +91,7 @@ router.post('/login', upload.none(), login);
  * @swagger
  * /api/auth/send-verification:
  *   post:
- *     summary: Send email verification code
+ *     summary: Resend Signup Verification Code
  *     tags: [Auth - Registration]
  *     security:
  *       - bearerAuth: []

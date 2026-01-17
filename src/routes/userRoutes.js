@@ -3,6 +3,8 @@
  * tags:
  *   name: Users
  *   description: User profile management
+ *   - name: Auth - Update Email
+ *     description: Update email flow
  */
 
 const express = require('express');
@@ -11,6 +13,7 @@ const {
     updateProfile,
     updateEmailRequest,
     verifyEmailUpdate,
+    resendEmailUpdateCode,
     updatePassword
 } = require('../controllers/userController');
 const { protect } = require('../middleware/auth');
@@ -64,7 +67,7 @@ router.put('/profile', protect, upload.single('avatar'), updateProfile);
  * /api/users/update-email:
  *   post:
  *     summary: Request email update (sends code)
- *     tags: [Users]
+ *     tags: [Auth - Update Email]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -86,10 +89,24 @@ router.post('/update-email', protect, updateEmailRequest);
 
 /**
  * @swagger
+ * /api/users/update-email/resend:
+ *   post:
+ *     summary: Resend email update code
+ *     tags: [Auth - Update Email]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Verification code resent
+ */
+router.post('/update-email/resend', protect, resendEmailUpdateCode);
+
+/**
+ * @swagger
  * /api/users/verify-email-update:
  *   post:
  *     summary: Verify email update code
- *     tags: [Users]
+ *     tags: [Auth - Update Email]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
