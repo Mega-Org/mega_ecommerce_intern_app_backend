@@ -1,8 +1,8 @@
 /**
  * @swagger
  * tags:
- *   name: Users
- *   description: User profile management
+ *   - name: Users
+ *     description: User profile management
  *   - name: Users - Admin
  *     description: Admin user management
  *   - name: Auth - Update Email
