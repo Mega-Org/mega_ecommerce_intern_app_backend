@@ -10,8 +10,12 @@ const notificationSchema = new mongoose.Schema({
     message: { type: String, required: true },
     type: {
         type: String,
-        enum: ['order', 'review', 'system'],
-        default: 'system'
+        enum: ['ORDER', 'PRODUCT', 'ANNOUNCEMENT', 'REMINDER', 'SYSTEM'],
+        default: 'SYSTEM'
+    },
+    data: {
+        type: Object, // Flexible JSON data
+        default: {}
     },
     isRead: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now }

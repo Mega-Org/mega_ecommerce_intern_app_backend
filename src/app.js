@@ -38,6 +38,7 @@ app.use('/api/products', require('./routes/productRoutes'));
 app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/requests', require('./routes/requestRoutes'));
 app.use('/api/info', require('./routes/infoRoutes'));
+app.use('/api/notifications', require('./routes/notificationRoutes'));
 
 // Base Route
 app.get('/', (req, res) => {

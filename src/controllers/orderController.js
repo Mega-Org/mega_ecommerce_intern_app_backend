@@ -3,6 +3,8 @@ const Cart = require('../models/Cart');
 const Product = require('../models/Product');
 const Notification = require('../models/Notification');
 const User = require('../models/User');
+const { sendToUser } = require('../services/notificationService');
+const { NotificationTypes } = require('../utils/constants');
 
 // --- CART CONTROLLERS ---
 
@@ -195,8 +197,20 @@ exports.createOrder = async (req, res) => {
             user: req.user._id,
             title: 'Order Placed',
             message: `Order #${createdOrder._id} placed successfully.`,
-            type: 'order'
+            type: NotificationTypes.ORDER,
+            data: { orderId: createdOrder._id }
         });
+
+        // Send Push Notification
+        await sendToUser(
+            req.user._id,
+            'Order Placed',
+            `Your order #${createdOrder._id} has been placed successfully.`,
+            {
+                type: NotificationTypes.ORDER,
+                orderId: createdOrder._id.toString()
+            }
+        );
 
         const { formatImage } = require('../utils/formatResource');
 

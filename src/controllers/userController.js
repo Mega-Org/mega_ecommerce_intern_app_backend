@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const Product = require('../models/Product');
 const TraderRequest = require('../models/TraderRequest');
+const { subscribeToTopic } = require('../services/notificationService');
 
 // @desc    Get user profile
 // @route   GET /api/users/profile
@@ -282,6 +283,33 @@ exports.deleteUser = async (req, res) => {
         await user.deleteOne();
 
         res.json({ success: true, message: 'User and associated data removed' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+// @desc    Update FCM Token
+// @route   PUT /api/users/fcm-token
+// @access  Private
+exports.updateFcmToken = async (req, res) => {
+    try {
+        const { fcmToken } = req.body;
+
+        if (!fcmToken) {
+            return res.status(400).json({ success: false, message: 'Please provide fcmToken' });
+        }
+
+        const user = await User.findById(req.user.id);
+        if (user) {
+            user.fcmToken = fcmToken;
+            await user.save();
+
+            // Subscribe to default topic
+            await subscribeToTopic(fcmToken, 'all_users');
+
+            res.json({ success: true, message: 'FCM Token updated' });
+        } else {
+            res.status(404).json({ success: false, message: 'User not found' });
+        }
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

@@ -81,6 +81,9 @@ router.post('/signup', upload.single('avatar'), register);
  *                 type: string
  *               password:
  *                 type: string
+ *               fcmToken:
+ *                 type: string
+ *                 description: Optional FCM token for push notifications
  *     responses:
  *       200:
  *         description: Login success

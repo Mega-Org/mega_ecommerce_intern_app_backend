@@ -18,7 +18,8 @@ const {
     resendEmailUpdateCode,
     updatePassword,
     getUserTypes,
-    deleteUser
+    deleteUser,
+    updateFcmToken
 } = require('../controllers/userController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -193,5 +194,30 @@ router.delete('/:id', protect, authorize('admin'), deleteUser);
  *         description: List of user roles
  */
 router.get('/types', getUserTypes);
+
+/**
+ * @swagger
+ * /api/users/fcm-token:
+ *   put:
+ *     summary: Update FCM Token
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - fcmToken
+ *             properties:
+ *               fcmToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Token updated
+ */
+router.put('/fcm-token', protect, updateFcmToken);
 
 module.exports = router;

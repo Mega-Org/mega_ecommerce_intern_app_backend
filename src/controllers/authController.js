@@ -2,6 +2,7 @@ const User = require('../models/User');
 const TraderRequest = require('../models/TraderRequest');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const { subscribeToTopic } = require('../services/notificationService');
 
 // Generate JWT
 const generateToken = (user) => {
@@ -99,6 +100,8 @@ exports.login = async (req, res) => {
             if (fcmToken) {
                 user.fcmToken = fcmToken;
                 await user.save();
+                // Subscribe to default topic
+                await subscribeToTopic(fcmToken, 'all_users');
             }
 
             const userData = await User.findById(user._id).select('-password');
