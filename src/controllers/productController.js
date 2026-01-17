@@ -93,12 +93,22 @@ exports.createProduct = async (req, res) => {
         let image = 'https://via.placeholder.com/150'; // Default
         let images = [];
 
+        // Helper to get path or base64
+        const getImagePath = (file) => {
+            if (file.path) return file.path;
+            if (file.buffer) {
+                return `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+            }
+            return null;
+        };
+
         if (req.files) {
             if (req.files.image && req.files.image[0]) {
-                image = req.files.image[0].path; // Cloudinary URL automatically provided by storage
+                const path = getImagePath(req.files.image[0]);
+                if (path) image = path;
             }
             if (req.files.images) {
-                images = req.files.images.map(file => file.path);
+                images = req.files.images.map(file => getImagePath(file)).filter(p => p !== null);
             }
         } else if (req.body.image) {
             // Allow manual URL overrides if sent as text
@@ -226,6 +236,116 @@ exports.getUserFavorites = async (req, res) => {
         // Favorites usually shown as list, exclude reviews
         const products = productsDocs.map(product => formatProduct(product, req, { excludeReviews: true }));
         res.json({ success: true, data: products });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// @desc    Get My Products (Trader/Owner)
+// @route   GET /api/products/myproducts
+// @access  Private (Owner/Admin)
+exports.getMyProducts = async (req, res) => {
+    try {
+        const productsDocs = await Product.find({ owner: req.user._id });
+        const products = productsDocs.map(product => formatProduct(product, req, { excludeReviews: true }));
+        res.json({ success: true, data: products });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// @desc    Update a product
+// @route   PUT /api/products/:id
+// @access  Private (Admin/Owner)
+exports.updateProduct = async (req, res) => {
+    try {
+        const { name, price, description, countInStock, category } = req.body;
+        const product = await Product.findById(req.params.id);
+
+        if (!product) {
+            return res.status(404).json({ success: false, message: 'Product not found' });
+        }
+
+        // Check ownership (Admin can update anything)
+        if (product.owner.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Not authorized to update this product' });
+        }
+
+        // Helper to get path or base64
+        const getImagePath = (file) => {
+            if (file.path) return file.path;
+            if (file.buffer) {
+                return `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+            }
+            return null;
+        };
+
+        // Handle Image Uploads
+        // Handle Image Update (Main Image)
+        if (req.files && req.files.image && req.files.image[0]) {
+            const path = getImagePath(req.files.image[0]);
+            if (path) product.image = path;
+        } else if (req.body.image) {
+            product.image = req.body.image;
+        }
+
+        // Handle Gallery Images (Flexible Add/Remove)
+        let updatedGallery = null;
+
+        // 1. Determine base gallery from 'existingImages' (if provided) or current images
+        if (req.body.existingImages !== undefined) {
+            if (Array.isArray(req.body.existingImages)) {
+                updatedGallery = [...req.body.existingImages];
+            } else {
+                updatedGallery = [req.body.existingImages];
+            }
+        }
+
+        // 2. Append new uploads
+        if (req.files && req.files.images) {
+            if (updatedGallery === null) {
+                updatedGallery = [...product.images]; // Default: Keep all existing if not explicitly managed
+            }
+            const newPaths = req.files.images.map(file => getImagePath(file)).filter(p => p !== null);
+            updatedGallery = [...updatedGallery, ...newPaths];
+        }
+
+        // 3. Apply changes if gallery was modified
+        if (updatedGallery !== null) {
+            product.images = updatedGallery;
+        }
+
+        product.name = name || product.name;
+        product.price = price || product.price;
+        product.description = description || product.description;
+        product.countInStock = countInStock || product.countInStock;
+        product.category = category || product.category;
+
+        const updatedProduct = await product.save();
+        res.json(updatedProduct);
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// @desc    Delete a product
+// @route   DELETE /api/products/:id
+// @access  Private (Admin/Owner)
+exports.deleteProduct = async (req, res) => {
+    try {
+        const product = await Product.findById(req.params.id);
+
+        if (!product) {
+            return res.status(404).json({ success: false, message: 'Product not found' });
+        }
+
+        // Check ownership
+        if (product.owner.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Not authorized to delete this product' });
+        }
+
+        await product.deleteOne(); // or remove() depending on Mongoose version
+        res.json({ success: true, message: 'Product removed' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

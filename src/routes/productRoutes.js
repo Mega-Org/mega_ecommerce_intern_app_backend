@@ -13,12 +13,29 @@ const {
     createProduct,
     createProductReview,
     toggleFavorite,
-    getUserFavorites
+    getUserFavorites,
+    getMyProducts,
+    updateProduct,
+    deleteProduct
 } = require('../controllers/productController');
 const { protect, authorize, optionalProtect } = require('../middleware/auth');
 const upload = require('../config/upload');
 
 const router = express.Router();
+
+/**
+ * @swagger
+ * /api/products/myproducts:
+ *   get:
+ *     summary: Get my products (Owner)
+ *     tags: [Products]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of own products
+ */
+router.get('/myproducts', protect, authorize('admin', 'owner'), getMyProducts);
 
 /**
  * @swagger
@@ -117,6 +134,59 @@ router.get('/favorites', protect, getUserFavorites);
  *         description: Product details
  */
 router.get('/:id', optionalProtect, getProductById);
+
+/**
+ * @swagger
+ * /api/products/{id}:
+ *   put:
+ *     summary: Update product (Admin/Owner)
+ *     tags: [Products]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               price:
+ *                 type: number
+ *               description:
+ *                 type: string
+ *               countInStock:
+ *                 type: number
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Updated product
+ */
+router.put('/:id', protect, authorize('admin', 'owner'), upload.fields([{ name: 'image', maxCount: 1 }, { name: 'images', maxCount: 5 }]), updateProduct);
+
+/**
+ * @swagger
+ * /api/products/{id}:
+ *   delete:
+ *     summary: Delete product (Admin/Owner)
+ *     tags: [Products]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *     responses:
+ *       200:
+ *         description: Product deleted
+ */
+router.delete('/:id', protect, authorize('admin', 'owner'), deleteProduct);
 
 /**
  * @swagger

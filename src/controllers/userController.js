@@ -1,4 +1,6 @@
 const User = require('../models/User');
+const Product = require('../models/Product');
+const TraderRequest = require('../models/TraderRequest');
 
 // @desc    Get user profile
 // @route   GET /api/users/profile
@@ -9,6 +11,10 @@ exports.getProfile = async (req, res) => {
         if (user) {
             const userData = user.toObject();
 
+            // Fetch latest trader request
+            const request = await TraderRequest.findOne({ user: user._id }).sort({ createdAt: -1 });
+            const traderRequestStatus = request ? request.status : null;
+
             // Construct full avatar URL
             if (userData.avatar && !userData.avatar.startsWith('http')) {
                 const protocol = req.headers['x-forwarded-proto'] || req.protocol;
@@ -18,7 +24,7 @@ exports.getProfile = async (req, res) => {
 
             res.json({
                 success: true,
-                data: userData
+                data: { ...userData, traderRequestStatus }
             });
         } else {
             res.status(404).json({ success: false, message: 'User not found' });
@@ -50,6 +56,10 @@ exports.updateProfile = async (req, res) => {
             const updatedUser = await user.save();
             const userData = updatedUser.toObject();
 
+            // Fetch latest trader request
+            const request = await TraderRequest.findOne({ user: updatedUser._id }).sort({ createdAt: -1 });
+            const traderRequestStatus = request ? request.status : null;
+
             // Construct full avatar URL
             if (userData.avatar && !userData.avatar.startsWith('http')) {
                 const protocol = req.headers['x-forwarded-proto'] || req.protocol;
@@ -59,7 +69,7 @@ exports.updateProfile = async (req, res) => {
 
             res.json({
                 success: true,
-                data: userData
+                data: { ...userData, traderRequestStatus }
             });
         } else {
             res.status(404).json({ success: false, message: 'User not found' });
@@ -198,6 +208,80 @@ exports.updatePassword = async (req, res) => {
         await user.save();
 
         res.json({ success: true, message: 'Password updated successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// @desc    Get User Types (Roles)
+// @route   GET /api/users/types
+// @access  Public
+exports.getUserTypes = (req, res) => {
+    const roles = ['user', 'admin', 'owner']; // Matches User model enum
+    res.json(roles);
+};
+
+// @desc    Delete user (Admin)
+// @route   DELETE /api/users/:id
+// @access  Private (Admin)
+exports.deleteUser = async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        // 1. Delete Products owned by user
+        await Product.deleteMany({ owner: user._id });
+
+        // 2. Remove reviews by this user from ALL products
+        // This prevents products from having reviews linked to non-existent users
+        await Product.updateMany(
+            { 'reviews.user': user._id },
+            { $pull: { reviews: { user: user._id } } }
+        );
+
+        // 3. Delete Trader Requests
+        await TraderRequest.deleteMany({ user: user._id });
+
+        // 4. Delete the user
+        await user.deleteOne();
+
+        res.json({ success: true, message: 'User and associated data removed' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// @desc    Delete user (Admin)
+// @route   DELETE /api/users/:id
+// @access  Private (Admin)
+exports.deleteUser = async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        // 1. Delete Products owned by user
+        await Product.deleteMany({ owner: user._id });
+
+        // 2. Remove reviews by this user from ALL products
+        // This prevents products from having reviews linked to non-existent users
+        await Product.updateMany(
+            { 'reviews.user': user._id },
+            { $pull: { reviews: { user: user._id } } }
+        );
+
+        // 3. Delete Trader Requests
+        await TraderRequest.deleteMany({ user: user._id });
+
+        // 4. Delete the user
+        await user.deleteOne();
+
+        res.json({ success: true, message: 'User and associated data removed' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

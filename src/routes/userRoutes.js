@@ -3,6 +3,8 @@
  * tags:
  *   name: Users
  *   description: User profile management
+ *   - name: Users - Admin
+ *     description: Admin user management
  *   - name: Auth - Update Email
  *     description: Update email flow
  */
@@ -14,9 +16,11 @@ const {
     updateEmailRequest,
     verifyEmailUpdate,
     resendEmailUpdateCode,
-    updatePassword
+    updatePassword,
+    getUserTypes,
+    deleteUser
 } = require('../controllers/userController');
-const { protect } = require('../middleware/auth');
+const { protect, authorize } = require('../middleware/auth');
 
 const upload = require('../config/upload'); // Import upload config
 
@@ -155,6 +159,39 @@ router.post('/verify-email-update', protect, verifyEmailUpdate);
  *       200:
  *         description: Password updated
  */
+// ... protected routes
 router.put('/update-password', protect, updatePassword);
+
+/**
+ * @swagger
+ * /api/users/{id}:
+ *   delete:
+ *     summary: Delete user (Admin)
+ *     tags: [Users - Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: User deleted
+ */
+router.delete('/:id', protect, authorize('admin'), deleteUser);
+
+/**
+ * @swagger
+ * /api/users/types:
+ *   get:
+ *     summary: Get all user types (roles)
+ *     tags: [Users]
+ *     responses:
+ *       200:
+ *         description: List of user roles
+ */
+router.get('/types', getUserTypes);
 
 module.exports = router;

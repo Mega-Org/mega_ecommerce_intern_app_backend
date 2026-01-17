@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const TraderRequest = require('../models/TraderRequest');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
@@ -82,7 +83,7 @@ exports.register = async (req, res) => {
 // @access  Public
 exports.login = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, fcmToken } = req.body;
 
         // Validate email & password
         if (!email || !password) {
@@ -92,7 +93,14 @@ exports.login = async (req, res) => {
         // Check for user
         const user = await User.findOne({ email }).select('+password');
 
+
         if (user && (await user.matchPassword(password))) {
+            // Update FCM Token if provided
+            if (fcmToken) {
+                user.fcmToken = fcmToken;
+                await user.save();
+            }
+
             const userData = await User.findById(user._id).select('-password');
 
             // Construct full avatar URL

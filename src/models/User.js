@@ -68,6 +68,9 @@ const userSchema = new mongoose.Schema({
     tokenVersion: {
         type: Number,
         default: 0
+    },
+    fcmToken: {
+        type: String
     }
 });
 
