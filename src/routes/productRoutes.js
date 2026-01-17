@@ -9,12 +9,13 @@ const express = require('express');
 const {
     getProducts,
     getProductById,
+    getProductReviews,
     createProduct,
     createProductReview,
     toggleFavorite,
     getUserFavorites
 } = require('../controllers/productController');
-const { protect, authorize } = require('../middleware/auth');
+const { protect, authorize, optionalProtect } = require('../middleware/auth');
 const upload = require('../config/upload');
 
 const router = express.Router();
@@ -38,7 +39,7 @@ const router = express.Router();
  *       200:
  *         description: List of products
  */
-router.get('/', getProducts);
+router.get('/', optionalProtect, getProducts);
 
 /**
  * @swagger
@@ -115,7 +116,7 @@ router.get('/favorites', protect, getUserFavorites);
  *       200:
  *         description: Product details
  */
-router.get('/:id', getProductById);
+router.get('/:id', optionalProtect, getProductById);
 
 /**
  * @swagger
@@ -156,7 +157,7 @@ router.post('/:id/reviews', protect, createProductReview);
  * /api/products/{id}/favorite:
  *   post:
  *     summary: Toggle favorite
- *     tags: [Products]
+ *     tags: [Favorites]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -170,5 +171,71 @@ router.post('/:id/reviews', protect, createProductReview);
  *         description: Favorite toggled
  */
 router.post('/:id/favorite', protect, toggleFavorite);
+
+/**
+ * @swagger
+ * /api/products/favorites:
+ *   get:
+ *     summary: Get user favorites
+ *     tags: [Favorites]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of favorites
+ */
+router.get('/favorites', protect, getUserFavorites);
+
+/**
+ * @swagger
+ * /api/products/{id}/reviews:
+ *   post:
+ *     summary: Add review
+ *     tags: [Reviews]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - rating
+ *               - comment
+ *             properties:
+ *               rating:
+ *                 type: number
+ *               comment:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Review added
+ */
+router.post('/:id/reviews', protect, createProductReview);
+
+/**
+ * @swagger
+ * /api/products/{id}/reviews:
+ *   get:
+ *     summary: Get reviews for a product
+ *     tags: [Reviews]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: List of reviews
+ */
+router.get('/:id/reviews', optionalProtect, getProductReviews);
 
 module.exports = router;

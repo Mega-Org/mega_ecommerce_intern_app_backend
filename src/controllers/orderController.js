@@ -6,31 +6,46 @@ const User = require('../models/User');
 
 // --- CART CONTROLLERS ---
 
+// Helper to format Cart Item
+const { formatProduct } = require('../utils/formatResource');
+
+const formatCartItem = (item, req) => {
+    // Handle populated product
+    let productObj = item.product;
+
+    // Use the standard formatter for product
+    if (productObj) {
+        productObj = formatProduct(productObj, req);
+    }
+
+    return {
+        id: item._id,
+        product: productObj,
+        quantity: item.quantity,
+        created_at: item.createdAt
+    };
+};
+
 // @desc    Get User Cart
 // @route   GET /api/orders/cart
 // @access  Private
 exports.getCart = async (req, res) => {
     try {
-        let cart = await Cart.findOne({ user: req.user._id });
+        let cart = await Cart.findOne({ user: req.user._id })
+            .populate({
+                path: 'cartItems.product',
+                populate: { path: 'owner', select: 'name avatar rating' }
+            });
+
         if (!cart) {
             cart = await Cart.create({ user: req.user._id, cartItems: [] });
         }
 
-        // Transform image URLs
-        const cartObj = cart.toObject();
-        if (cartObj.cartItems && cartObj.cartItems.length > 0) {
-            const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-            const host = req.get('host');
+        const formattedItems = cart.cartItems.map(item => formatCartItem(item, req));
 
-            cartObj.cartItems = cartObj.cartItems.map(item => {
-                if (item.image && !item.image.startsWith('http')) {
-                    item.image = `${protocol}://${host}/${item.image}`;
-                }
-                return item;
-            });
-        }
-
-        res.json(cartObj);
+        res.json({
+            cartItems: formattedItems
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -42,8 +57,10 @@ exports.getCart = async (req, res) => {
 exports.addToCart = async (req, res) => {
     try {
         const { productId, qty } = req.body;
-        const product = await Product.findById(productId);
+        // User sends 'qty', map to 'quantity'
+        const quantityToAdd = Number(qty);
 
+        const product = await Product.findById(productId);
         if (!product) {
             return res.status(404).json({ success: false, message: 'Product not found' });
         }
@@ -56,26 +73,33 @@ exports.addToCart = async (req, res) => {
         const itemIndex = cart.cartItems.findIndex(p => p.product.toString() === productId);
 
         if (itemIndex > -1) {
-            // Product exists in cart, update qty
-            cart.cartItems[itemIndex].qty += Number(qty);
-            if (cart.cartItems[itemIndex].qty <= 0) {
+            // Product exists in cart, update quantity
+            cart.cartItems[itemIndex].quantity += quantityToAdd;
+            if (cart.cartItems[itemIndex].quantity <= 0) {
                 cart.cartItems.splice(itemIndex, 1);
             }
         } else {
             // Add new
-            if (qty > 0) {
+            if (quantityToAdd > 0) {
                 cart.cartItems.push({
                     product: productId,
-                    name: product.name,
-                    image: product.image,
-                    price: product.price,
-                    qty: Number(qty)
+                    quantity: quantityToAdd
                 });
             }
         }
 
         await cart.save();
-        res.json(cart);
+
+        // Return fully populated cart for consistency
+        const populatedCart = await Cart.findById(cart._id)
+            .populate({
+                path: 'cartItems.product',
+                populate: { path: 'owner', select: 'name avatar rating' }
+            });
+
+        const formattedItems = populatedCart.cartItems.map(item => formatCartItem(item, req));
+        res.json({ cartItems: formattedItems });
+
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -89,10 +113,21 @@ exports.removeFromCart = async (req, res) => {
         let cart = await Cart.findOne({ user: req.user._id });
         if (!cart) return res.status(404).json({ message: 'Cart not found' });
 
-        cart.cartItems = cart.cartItems.filter(item => item.product.toString() !== req.params.id);
+        // Filter by Product ID OR CartItem ID
+        cart.cartItems = cart.cartItems.filter(item =>
+            item.product.toString() !== req.params.id && item._id.toString() !== req.params.id
+        );
 
         await cart.save();
-        res.json(cart);
+
+        const populatedCart = await Cart.findById(cart._id)
+            .populate({
+                path: 'cartItems.product',
+                populate: { path: 'owner', select: 'name avatar rating' }
+            });
+
+        const formattedItems = populatedCart.cartItems.map(item => formatCartItem(item, req));
+        res.json({ cartItems: formattedItems });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -105,18 +140,35 @@ exports.removeFromCart = async (req, res) => {
 // @access  Private
 exports.createOrder = async (req, res) => {
     try {
-        // Option 1: Create from passed items
-        // Option 2: Create from stored Cart (preferred based on "checkout make order direct")
-
-        // Let's support creating from Cart primarily.
-        const cart = await Cart.findOne({ user: req.user._id });
+        // Fetch cart with populated products to get current prices
+        const cart = await Cart.findOne({ user: req.user._id })
+            .populate({
+                path: 'cartItems.product',
+                populate: { path: 'owner', select: 'name avatar rating' }
+            });
 
         if (!cart || cart.cartItems.length === 0) {
             return res.status(400).json({ success: false, message: 'No items in cart' });
         }
 
-        const orderItems = cart.cartItems;
-        const itemsPrice = orderItems.reduce((acc, item) => acc + item.price * item.qty, 0);
+        const orderItems = [];
+        let itemsPrice = 0;
+
+        for (const item of cart.cartItems) {
+            const product = item.product;
+            if (!product) continue; // Skip if product deleted
+
+            orderItems.push({
+                product: product._id,
+                name: product.name,
+                image: product.image,
+                price: product.price,
+                qty: item.quantity // Mapping quantity -> qty
+            });
+
+            itemsPrice += product.price * item.quantity;
+        }
+
         const taxPrice = 0; // Simplified
         const shippingPrice = 0; // Simplified
         const totalPrice = itemsPrice + taxPrice + shippingPrice;
@@ -128,7 +180,7 @@ exports.createOrder = async (req, res) => {
             taxPrice,
             shippingPrice,
             totalPrice,
-            isPaid: false, // Default
+            isPaid: false,
             isDelivered: false
         });
 
@@ -146,23 +198,30 @@ exports.createOrder = async (req, res) => {
             type: 'order'
         });
 
-        // Notify Admin/Owner (Optional log or real notification)
-        // console.log(`New Order: ${createdOrder._id}`);
+        const { formatImage } = require('../utils/formatResource');
 
-        const orderObj = createdOrder.toObject();
-        if (orderObj.orderItems) {
-            const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-            const host = req.get('host');
-            orderObj.orderItems = orderObj.orderItems.map(item => {
-                if (item.image && !item.image.startsWith('http')) {
-                    item.image = `${protocol}://${host}/${item.image}`;
-                }
-                return item;
-            });
-        }
-        res.status(201).json(orderObj);
+        const formattedItems = orderItems.map(item => {
+            // Clone to avoid mutation
+            const newItem = { ...item };
+            if (newItem.image) {
+                newItem.image = formatImage(newItem.image, req);
+            }
+            return newItem;
+        });
 
+        // We can just return the populated order if we want, or the summary.
+        // Let's stick to the summary requested but maybe populate the order items for the 'order' object return.
 
+        // To be safe and consistent with "Resource" standard, we should probably format the `order.orderItems` too 
+        // if they are accessed.
+
+        res.status(201).json({
+            success: true,
+            message: 'Checkout successful',
+            order: createdOrder,
+            total: totalPrice,
+            items: formattedItems
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -173,7 +232,14 @@ exports.createOrder = async (req, res) => {
 // @access  Private
 exports.getMyOrders = async (req, res) => {
     try {
-        const ordersDocs = await Order.find({ user: req.user._id }).sort({ createdAt: -1 });
+        const pageSize = Number(req.query.limit) || 10;
+        const page = Number(req.query.page) || 1;
+
+        const count = await Order.countDocuments({ user: req.user._id });
+        const ordersDocs = await Order.find({ user: req.user._id })
+            .sort({ createdAt: -1 })
+            .limit(pageSize)
+            .skip(pageSize * (page - 1));
 
         const orders = ordersDocs.map(order => {
             const o = order.toObject();
@@ -190,7 +256,9 @@ exports.getMyOrders = async (req, res) => {
             return o;
         });
 
-        res.json(orders);
+        // Use standard pagination helper
+        const { formatPaginatedResponse } = require('../utils/formatResource');
+        res.json(formatPaginatedResponse('orders', orders, count, page, pageSize));
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

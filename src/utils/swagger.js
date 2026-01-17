@@ -36,6 +36,19 @@ const options = {
             },
         },
         security: [{ bearerAuth: [] }],
+        tags: [
+            { name: 'Auth - Registration', description: 'User registration & verification' },
+            { name: 'Auth - Session', description: 'Login & session management' },
+            { name: 'Auth - Password Reset', description: 'Password recovery flow' },
+            { name: 'Users', description: 'User profile management' },
+            { name: 'Products', description: 'Product management' },
+            { name: 'Favorites', description: 'User favorites' },
+            { name: 'Reviews', description: 'Product reviews' },
+            { name: 'Cart', description: 'Shopping cart' },
+            { name: 'Orders', description: 'Order processing' },
+            { name: 'Info', description: 'Static pages and app info' },
+            { name: 'Notifications', description: 'User notifications' }
+        ]
     },
     // Use process.cwd() which is safer in Vercel/Serverless environments
     apis: [path.join(process.cwd(), 'src/routes/*.js')],

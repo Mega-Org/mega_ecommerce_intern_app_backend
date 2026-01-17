@@ -1,8 +1,12 @@
 /**
  * @swagger
  * tags:
- *   name: Auth
- *   description: Authentication management
+ *   - name: Auth - Registration
+ *     description: User registration and verification
+ *   - name: Auth - Session
+ *     description: Login and logout
+ *   - name: Auth - Password Reset
+ *     description: Forgot and reset password flow
  */
 
 const express = require('express');
@@ -14,6 +18,7 @@ const {
     forgotPassword,
     resetPassword,
     verifyResetCode,
+    resendResetCode,
     logout,
     deleteAccount
 } = require('../controllers/authController');
@@ -27,7 +32,7 @@ const router = express.Router();
  * /api/auth/signup:
  *   post:
  *     summary: Register a new user
- *     tags: [Auth]
+ *     tags: [Auth - Registration]
  *     requestBody:
  *       required: true
  *       content:
@@ -61,7 +66,7 @@ router.post('/signup', upload.single('avatar'), register);
  * /api/auth/login:
  *   post:
  *     summary: Login user
- *     tags: [Auth]
+ *     tags: [Auth - Session]
  *     requestBody:
  *       required: true
  *       content:
@@ -87,7 +92,7 @@ router.post('/login', upload.none(), login);
  * /api/auth/send-verification:
  *   post:
  *     summary: Send email verification code
- *     tags: [Auth]
+ *     tags: [Auth - Registration]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -101,7 +106,7 @@ router.post('/send-verification', protect, sendVerificationCode);
  * /api/auth/verify-email:
  *   post:
  *     summary: Verify email using code
- *     tags: [Auth]
+ *     tags: [Auth - Registration]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -124,7 +129,7 @@ router.post('/verify-email', protect, verifyEmail);
  * /api/auth/forgot-password:
  *   post:
  *     summary: Send reset password code
- *     tags: [Auth]
+ *     tags: [Auth - Password Reset]
  *     requestBody:
  *       required: true
  *       content:
@@ -136,7 +141,7 @@ router.post('/verify-email', protect, verifyEmail);
  *                 type: string
  *     responses:
  *       200:
- *         description: Code sent
+ *         description: Code sent, token returned
  */
 router.post('/forgot-password', forgotPassword);
 
@@ -145,7 +150,9 @@ router.post('/forgot-password', forgotPassword);
  * /api/auth/verify-pass-code:
  *   post:
  *     summary: Verify reset password code
- *     tags: [Auth]
+ *     tags: [Auth - Password Reset]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -153,18 +160,30 @@ router.post('/forgot-password', forgotPassword);
  *           schema:
  *             type: object
  *             required:
- *               - email
  *               - code
  *             properties:
- *               email:
- *                 type: string
  *               code:
  *                 type: string
  *     responses:
  *       200:
  *         description: Code verified
  */
-router.post('/verify-pass-code', verifyResetCode);
+router.post('/verify-pass-code', protect, verifyResetCode);
+
+
+/**
+ * @swagger
+ * /api/auth/resend-pass-code:
+ *   post:
+ *     summary: Resend reset password code
+ *     tags: [Auth - Password Reset]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Code resent
+ */
+router.post('/resend-pass-code', protect, resendResetCode);
 
 
 /**
@@ -172,7 +191,9 @@ router.post('/verify-pass-code', verifyResetCode);
  * /api/auth/reset-password:
  *   post:
  *     summary: Reset password
- *     tags: [Auth]
+ *     tags: [Auth - Password Reset]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -180,15 +201,9 @@ router.post('/verify-pass-code', verifyResetCode);
  *           schema:
  *             type: object
  *             required:
- *               - email
- *               - code
  *               - newPassword
  *               - confirmPassword
  *             properties:
- *               email:
- *                 type: string
- *               code:
- *                 type: string
  *               newPassword:
  *                 type: string
  *               confirmPassword:
@@ -197,14 +212,14 @@ router.post('/verify-pass-code', verifyResetCode);
  *       200:
  *         description: Password updated
  */
-router.post('/reset-password', resetPassword);
+router.post('/reset-password', protect, resetPassword);
 
 /**
  * @swagger
  * /api/auth/logout:
  *   get:
  *     summary: Logout user
- *     tags: [Auth]
+ *     tags: [Auth - Session]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -218,7 +233,7 @@ router.get('/logout', protect, logout);
  * /api/auth/delete:
  *   delete:
  *     summary: Delete user account
- *     tags: [Auth]
+ *     tags: [Auth - Session]
  *     security:
  *       - bearerAuth: []
  *     responses:

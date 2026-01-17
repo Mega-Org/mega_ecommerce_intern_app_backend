@@ -1,6 +1,10 @@
 const Product = require('../models/Product');
 const Notification = require('../models/Notification');
 
+// Helper
+// Helper
+const { formatProduct, formatPaginatedResponse } = require('../utils/formatResource');
+
 // @desc    Fetch all products (Pagination + Search)
 // @route   GET /api/products
 // @access  Public
@@ -20,25 +24,13 @@ exports.getProducts = async (req, res) => {
 
         const count = await Product.countDocuments({ ...keyword });
         const productsDocs = await Product.find({ ...keyword })
+            .populate('owner', 'name avatar rating')
             .limit(pageSize)
             .skip(pageSize * (page - 1));
 
-        const products = productsDocs.map(product => {
-            const p = product.toObject();
-            if (p.image && !p.image.startsWith('http')) {
-                const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-                const host = req.get('host');
-                p.image = `${protocol}://${host}/${p.image}`;
-            }
-            if (p.images && p.images.length > 0) {
-                const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-                const host = req.get('host');
-                p.images = p.images.map(img => img.startsWith('http') ? img : `${protocol}://${host}/${img}`);
-            }
-            return p;
-        });
+        const products = productsDocs.map(product => formatProduct(product, req, { excludeReviews: true }));
 
-        res.json({ products, page, pages: Math.ceil(count / pageSize) });
+        res.json(formatPaginatedResponse('products', products, count, page, pageSize));
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -49,35 +41,42 @@ exports.getProducts = async (req, res) => {
 // @access  Public
 exports.getProductById = async (req, res) => {
     try {
-        const product = await Product.findById(req.params.id).populate('reviews.user', 'name avatar');
+        const product = await Product.findById(req.params.id)
+            .populate('reviews.user', 'name avatar')
+            .populate('owner', 'name avatar rating');
 
         if (product) {
-            const p = product.toObject();
-            if (p.image && !p.image.startsWith('http')) {
-                const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-                const host = req.get('host');
-                p.image = `${protocol}://${host}/${p.image}`;
-            }
-            if (p.images && p.images.length > 0) {
-                const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-                const host = req.get('host');
-                p.images = p.images.map(img => img.startsWith('http') ? img : `${protocol}://${host}/${img}`);
-            }
-            // Also reviews avatars if any
-            if (p.reviews) {
-                const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-                const host = req.get('host');
-                p.reviews = p.reviews.map(r => {
-                    if (r.user && r.user.avatar && !r.user.avatar.startsWith('http')) {
-                        r.user.avatar = `${protocol}://${host}/${r.user.avatar}`;
-                    }
-                    return r;
-                });
-            }
-            res.json(p);
+            res.json(formatProduct(product, req, { excludeReviews: false }));
         } else {
             res.status(404).json({ success: false, message: 'Product not found' });
         }
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// @desc    Get Product Reviews
+// @route   GET /api/products/:id/reviews
+// @access  Public
+exports.getProductReviews = async (req, res) => {
+    try {
+        const product = await Product.findById(req.params.id)
+            .populate('reviews.user', 'name avatar');
+
+        if (!product) {
+            return res.status(404).json({ success: false, message: 'Product not found' });
+        }
+
+        // We use the helper but only extract reviews
+        // We can reuse formatProduct with excludeReviews: false and just return reviews
+        const formattedProduct = formatProduct(product, req, { excludeReviews: false });
+
+        res.json({
+            success: true,
+            reviews: formattedProduct.reviews,
+            rating: formattedProduct.rating,
+            numReviews: formattedProduct.numReviews
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -151,9 +150,9 @@ exports.createProductReview = async (req, res) => {
             product.reviews.push(review);
 
             product.numReviews = product.reviews.length;
-            product.rating =
-                product.reviews.reduce((acc, item) => item.rating + acc, 0) /
-                product.reviews.length;
+            // Calculate average
+            const total = product.reviews.reduce((acc, item) => item.rating + acc, 0);
+            product.rating = total / product.reviews.length;
 
             await product.save();
 
@@ -181,7 +180,7 @@ exports.createProductReview = async (req, res) => {
 // @access  Private
 exports.toggleFavorite = async (req, res) => {
     try {
-        const product = await Product.findById(req.params.id);
+        let product = await Product.findById(req.params.id).populate('owner', 'name avatar rating');
 
         if (product) {
             const isFavorite = product.favorites.includes(req.user._id);
@@ -197,7 +196,17 @@ exports.toggleFavorite = async (req, res) => {
             }
 
             await product.save();
-            res.json({ success: true, message: isFavorite ? 'Removed from favorites' : 'Added to favorites' });
+
+            // Return updated product formatted
+            // We need to re-format it. 
+            // Note: favorites array is modified in memory, so formatProduct will see it.
+            const formatted = formatProduct(product, req, { excludeReviews: true });
+
+            res.json({
+                success: true,
+                message: isFavorite ? 'Removed from favorites' : 'Added to favorites',
+                product: formatted
+            });
         } else {
             res.status(404).json({ success: false, message: 'Product not found' });
         }
@@ -211,16 +220,11 @@ exports.toggleFavorite = async (req, res) => {
 // @access  Private
 exports.getUserFavorites = async (req, res) => {
     try {
-        const productsDocs = await Product.find({ favorites: req.user._id });
-        const products = productsDocs.map(product => {
-            const p = product.toObject();
-            if (p.image && !p.image.startsWith('http')) {
-                const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-                const host = req.get('host');
-                p.image = `${protocol}://${host}/${p.image}`;
-            }
-            return p;
-        });
+        const productsDocs = await Product.find({ favorites: req.user._id })
+            .populate('owner', 'name avatar rating');
+
+        // Favorites usually shown as list, exclude reviews
+        const products = productsDocs.map(product => formatProduct(product, req, { excludeReviews: true }));
         res.json({ success: true, data: products });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });

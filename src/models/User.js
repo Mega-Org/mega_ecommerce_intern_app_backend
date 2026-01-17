@@ -50,6 +50,10 @@ const userSchema = new mongoose.Schema({
         type: Date,
         select: false
     },
+    rating: {
+        type: Number,
+        default: 0
+    },
     createdAt: {
         type: Date,
         default: Date.now

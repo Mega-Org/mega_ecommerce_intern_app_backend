@@ -217,7 +217,10 @@ exports.forgotPassword = async (req, res) => {
 
         console.log(`Reset code for ${user.email}: ${resetToken}`);
 
-        res.status(200).json({ success: true, message: 'Reset code sent' });
+        // Generate temp token for the flow
+        const token = jwt.sign({ id: user._id, scope: 'reset_pending' }, process.env.JWT_SECRET, { expiresIn: '15m' });
+
+        res.status(200).json({ success: true, message: 'Reset code sent', token });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -225,23 +228,39 @@ exports.forgotPassword = async (req, res) => {
 
 // @desc    Verify Reset Code
 // @route   POST /api/auth/verify-pass-code
-// @access  Public
+// @access  Private (Protected by token from forgot-password)
 exports.verifyResetCode = async (req, res) => {
     try {
-        const { email, code } = req.body;
+        const { code } = req.body;
 
-        const user = await User.findOne({
-            email,
-            resetPasswordToken: code,
-            resetPasswordExpire: { $gt: Date.now() }
-        });
+        // Check scope
+        if (!req.tokenPayload || req.tokenPayload.scope !== 'reset_pending') {
+            return res.status(403).json({ success: false, message: 'Invalid token scope' });
+        }
+
+        // Fetch user with hidden fields
+        const user = await User.findById(req.user.id).select('+resetPasswordToken +resetPasswordExpire');
 
         if (!user) {
-            // Also check if code is the static '1234' depending on flow, 
-            // but the plan says match valid code '1234' with logic.
-            // If the saved token IS '1234', the above query works.
-            return res.status(400).json({ success: false, message: 'Invalid code or expired' });
+            return res.status(404).json({ success: false, message: 'User not found' });
         }
+
+        // Verify code
+        // We accept the static '1234' or the DB stored code
+        const isValid = (code === '1234') || (user.resetPasswordToken === code);
+
+        if (!isValid) {
+            return res.status(400).json({ success: false, message: 'Invalid code' });
+        }
+
+        if (user.resetPasswordExpire < Date.now()) {
+            return res.status(400).json({ success: false, message: 'Code expired' });
+        }
+
+        // Mark as verified
+        user.resetPasswordToken = 'VERIFIED';
+        user.resetPasswordExpire = Date.now() + 15 * 60 * 1000; // Add time for next step
+        await user.save({ validateBeforeSave: false });
 
         res.status(200).json({ success: true, message: 'Code verified successfully' });
     } catch (error) {
@@ -251,23 +270,29 @@ exports.verifyResetCode = async (req, res) => {
 
 // @desc    Reset Password
 // @route   POST /api/auth/reset-password
-// @access  Public
+// @access  Private (Protected by verified token)
 exports.resetPassword = async (req, res) => {
     try {
-        const { email, code, newPassword, confirmPassword } = req.body;
+        const { newPassword, confirmPassword } = req.body;
 
         if (newPassword !== confirmPassword) {
             return res.status(400).json({ success: false, message: 'Passwords do not match' });
         }
 
-        const user = await User.findOne({
-            email,
-            resetPasswordToken: code,
-            resetPasswordExpire: { $gt: Date.now() }
-        });
+        // Fetch user with hidden fields
+        const user = await User.findById(req.user.id).select('+resetPasswordToken +resetPasswordExpire');
 
         if (!user) {
-            return res.status(400).json({ success: false, message: 'Invalid code or expired' });
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        // Verify that previous step was done
+        if (user.resetPasswordToken !== 'VERIFIED') {
+            return res.status(400).json({ success: false, message: 'Email not verified for reset' });
+        }
+
+        if (user.resetPasswordExpire < Date.now()) {
+            return res.status(400).json({ success: false, message: 'Session expired' });
         }
 
         user.password = newPassword;
@@ -276,6 +301,36 @@ exports.resetPassword = async (req, res) => {
         await user.save();
 
         res.status(200).json({ success: true, message: 'Password updated success' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// @desc    Resend Reset Code
+// @route   POST /api/auth/resend-pass-code
+// @access  Private (Protected by token from forgot-password)
+exports.resendResetCode = async (req, res) => {
+    try {
+        // Check scope
+        if (!req.tokenPayload || req.tokenPayload.scope !== 'reset_pending') {
+            return res.status(403).json({ success: false, message: 'Invalid token scope' });
+        }
+
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        // Static code (same as forgotPassword)
+        const resetToken = '1234';
+        user.resetPasswordToken = resetToken;
+        user.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
+
+        await user.save({ validateBeforeSave: false });
+
+        console.log(`Resent Reset code for ${user.email}: ${resetToken}`);
+
+        res.status(200).json({ success: true, message: 'Reset code resent' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

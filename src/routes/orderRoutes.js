@@ -1,8 +1,12 @@
 /**
  * @swagger
  * tags:
- *   name: Orders
- *   description: Cart and Order management
+ *   - name: Cart
+ *     description: Cart management
+ *   - name: Orders
+ *     description: Order processing
+ *   - name: Notifications
+ *     description: User notifications
  */
 
 const express = require('express');
@@ -24,7 +28,7 @@ const router = express.Router();
  * /api/orders/cart:
  *   get:
  *     summary: Get user cart
- *     tags: [Orders]
+ *     tags: [Cart]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -38,7 +42,7 @@ router.get('/cart', protect, getCart);
  * /api/orders/cart:
  *   post:
  *     summary: Add item to cart
- *     tags: [Orders]
+ *     tags: [Cart]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -66,7 +70,7 @@ router.post('/cart', protect, addToCart);
  * /api/orders/cart/{id}:
  *   delete:
  *     summary: Remove item from cart
- *     tags: [Orders]
+ *     tags: [Cart]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -82,20 +86,22 @@ router.post('/cart', protect, addToCart);
  */
 router.delete('/cart/:id', protect, removeFromCart);
 
-// Order Routes
+// Checkout / Create Order
 /**
  * @swagger
- * /api/orders:
+ * /api/orders/checkout:
  *   post:
- *     summary: Create order from cart
+ *     summary: Checkout and create order
  *     tags: [Orders]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       201:
- *         description: Created order
+ *         description: Order created successfully
  */
-router.post('/', protect, createOrder);
+router.post('/checkout', protect, createOrder);
+
+
 
 /**
  * @swagger
@@ -105,6 +111,17 @@ router.post('/', protect, createOrder);
  *     tags: [Orders]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: Page number (default 1)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Items per page (default 10)
  *     responses:
  *       200:
  *         description: List of orders
@@ -117,7 +134,7 @@ router.get('/myorders', protect, getMyOrders);
  * /api/orders/notifications:
  *   get:
  *     summary: Get my notifications
- *     tags: [Orders]
+ *     tags: [Notifications]
  *     security:
  *       - bearerAuth: []
  *     responses:
