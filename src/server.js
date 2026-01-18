@@ -10,7 +10,6 @@ const swaggerDocs = require('./utils/swagger');
 const PORT = process.env.PORT || 3000;
 
 // Only start the server if this file is run directly (local development)
-// Only start the server if this file is run directly (local development)
 if (require.main === module) {
     app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
