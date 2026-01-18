@@ -1,8 +1,7 @@
 /**
  * @swagger
  * tags:
- *   - name: Cart
- *     description: Cart management
+
  *   - name: Orders
  *     description: Order processing
  *   - name: Notifications
@@ -11,9 +10,7 @@
 
 const express = require('express');
 const {
-    getCart,
-    addToCart,
-    removeFromCart,
+
     createOrder,
     getMyOrders,
     getOrderById,
@@ -24,69 +21,7 @@ const { protect } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Cart Routes
-/**
- * @swagger
- * /api/orders/cart:
- *   get:
- *     summary: Get user cart
- *     tags: [Cart]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Cart object
- */
-router.get('/cart', protect, getCart);
-
-/**
- * @swagger
- * /api/orders/cart:
- *   post:
- *     summary: Add item to cart
- *     tags: [Cart]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - productId
- *               - qty
- *             properties:
- *               productId:
- *                 type: string
- *               qty:
- *                 type: number
- *     responses:
- *       200:
- *         description: Updated cart
- */
-router.post('/cart', protect, addToCart);
-
-/**
- * @swagger
- * /api/orders/cart/{id}:
- *   delete:
- *     summary: Remove item from cart
- *     tags: [Cart]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Product ID
- *     responses:
- *       200:
- *         description: Updated cart
- */
-router.delete('/cart/:id', protect, removeFromCart);
+// Cart Routes Removed (Moved to cartRoutes.js)
 
 // Checkout / Create Order
 /**
