@@ -2,11 +2,9 @@
 
 A complete Node.js/Express REST API backend for a Flutter E-commerce application.
 
-
-- **Deployment**:
-    - **Live API**: [https://mega-ecommerce-intern-app-backend.vercel.app](https://mega-ecommerce-intern-app-backend.vercel.app)
-    - **Documentation**: [https://mega155-ecommerce-app-backend.vercel.app/api-docs/](https://mega-ecommerce-intern-app-backend.vercel.app/api-docs)
-    - **CI/CD**: Auto-deploys from `main` branch via Vercel.
+> **Live Deployment**
+> - **API Base URL**: [https://mega-ecommerce-intern-app-backend.vercel.app](https://mega-ecommerce-intern-app-backend.vercel.app)
+> - **Swagger Documentation**: [https://mega155-ecommerce-app-backend.vercel.app/api-docs](https://mega155-ecommerce-app-backend.vercel.app/api-docs)
 
 ## 🚀 Features
 
@@ -16,17 +14,21 @@ A complete Node.js/Express REST API backend for a Flutter E-commerce application
   - Email Verification & Forgot Password (Static code `1234` for dev)
   - Logout & Delete Account
 - **User Profile**: 
-  - Update Name/Avatar
+  - Update Name & Avatar
   - Secure Email & Password Updates
+  - **Auto-Avatar Cleanup**: Deleting/Updating avatar removes old file from cloud.
 - **Product Management**: 
-  - Admin/Owner: Add Products
-  - User: List (Search + Pagination), Details
-  - Reviews & Ratings system
-  - Favorites/Wishlist system
+  - Admin/Owner: Add/Update Products with **Images & Video**.
+  - **Smart Media**: 
+    - Images auto-converted to **JPG** (max 1080px) for Flutter performance.
+    - **Video Support** (`.mp4`) for product previews.
+  - **Smart Deletion**:
+    - If a product was **Ordered**: Soft Delete (Archived, keeps history).
+    - If **Unsold**: Hard Delete (Removes DB entry & destroys Cloudinary files).
 - **Cart & Orders**: 
   - Full Cart Management (Add, remove, update qty)
   - Checkout & Order Creation
-  - Order History
+  - Order History (Preserved even if product/user deleted)
 - **Notifications**: System alerts for orders and reviews
 - **Static Content**: Privacy, Terms, rate app endpoints
 
@@ -35,6 +37,7 @@ A complete Node.js/Express REST API backend for a Flutter E-commerce application
 - **Runtime**: Node.js
 - **Framework**: Express.js
 - **Database**: MongoDB (Mongoose ODM)
+- **Storage**: Cloudinary (Images & Videos)
 - **Authentication**: JSON Web Tokens (JWT) & bcryptjs
 - **Documentation**: Swagger UI
 
@@ -52,12 +55,15 @@ A complete Node.js/Express REST API backend for a Flutter E-commerce application
    ```
 
 3. **Environment Setup**
-   The project comes with a `.env` file (or rename `.env.example`). Ensure your MongoDB URI is correct.
+   Rename `.env.example` to `.env` and add:
    ```env
    PORT=3000
    NODE_ENV=development
-   MONGO_URI=mongodb://localhost:27017/mega_ecommerce
+   MONGO_URI=your_mongodb_uri
    JWT_SECRET=supersecretkey123
+   CLOUDINARY_CLOUD_NAME=your_cloud_name
+   CLOUDINARY_API_KEY=your_api_key
+   CLOUDINARY_API_SECRET=your_api_secret
    ```
 
 4. **Run the Server**
@@ -73,20 +79,22 @@ A complete Node.js/Express REST API backend for a Flutter E-commerce application
 
 This project includes Swagger UI for interactive API documentation and testing.
 
-一旦 server running (default port 3000):
-👉 **[http://localhost:3000/api-docs](http://localhost:3000/api-docs)**
+- Local: **[http://localhost:3000/api-docs](http://localhost:3000/api-docs)**
+- Live: **[https://mega-ecommerce-intern-app-backend.vercel.app/api-docs](https://mega-ecommerce-intern-app-backend.vercel.app/api-docs)**
 
-## 🧪 Testing
+## 🧪 Testing Notes
 
-- **Verification Code**: For Email Verification and Forgot Password, use the static code `1234`.
-- **Auth Header**: Most endpoints require a Bearer Token.
-  `Authorization: Bearer <your_jwt_token>`
+- **Verification Code**: Use `1234`.
+- **Media Uploads**: 
+  - Images (`image`, `images`): Supports PNG/JPG/WebP/etc -> Converts to **JPG**.
+  - Video (`video`): Supports MP4/MOV.
+- **Auth Header**: `Authorization: Bearer <your_jwt_token>`
 
 ## 📂 Project Structure
 
 ```
 src/
-├── config/         # Database config
+├── config/         # DB & Upload config
 ├── controllers/    # Route logic
 ├── docs/           # Swagger setup
 ├── middleware/     # Auth middleware
