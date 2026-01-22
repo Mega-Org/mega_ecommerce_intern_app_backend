@@ -114,3 +114,6 @@ dist
 # Project specific
 uploads/
 tmp/
+
+# Security
+src/config/serviceAccountKey.json
