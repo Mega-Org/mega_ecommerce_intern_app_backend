@@ -97,11 +97,14 @@ router.get('/', optionalProtect, getProducts);
  *                 items:
  *                   type: string
  *                   format: binary
+ *               video:
+ *                 type: string
+ *                 format: binary
  *     responses:
  *       201:
  *         description: Created product
  */
-router.post('/', protect, authorize('admin', 'owner'), upload.fields([{ name: 'image', maxCount: 1 }, { name: 'images', maxCount: 5 }]), createProduct);
+router.post('/', protect, authorize('admin', 'owner'), upload.fields([{ name: 'image', maxCount: 1 }, { name: 'images', maxCount: 5 }, { name: 'video', maxCount: 1 }]), createProduct);
 
 /**
  * @swagger
@@ -164,11 +167,14 @@ router.get('/:id', optionalProtect, getProductById);
  *               image:
  *                 type: string
  *                 format: binary
+ *               video:
+ *                 type: string
+ *                 format: binary
  *     responses:
  *       200:
  *         description: Updated product
  */
-router.put('/:id', protect, authorize('admin', 'owner'), upload.fields([{ name: 'image', maxCount: 1 }, { name: 'images', maxCount: 5 }]), updateProduct);
+router.put('/:id', protect, authorize('admin', 'owner'), upload.fields([{ name: 'image', maxCount: 1 }, { name: 'images', maxCount: 5 }, { name: 'video', maxCount: 1 }]), updateProduct);
 
 /**
  * @swagger
@@ -219,6 +225,7 @@ router.delete('/:id', protect, authorize('admin', 'owner'), deleteProduct);
  *     responses:
  *       201:
  *         description: Review added
+ *     tags: [Reviews]
  */
 router.post('/:id/reviews', protect, createProductReview);
 
@@ -254,41 +261,7 @@ router.post('/:id/favorite', protect, toggleFavorite);
  *       200:
  *         description: List of favorites
  */
-router.get('/favorites', protect, getUserFavorites);
-
-/**
- * @swagger
- * /api/products/{id}/reviews:
- *   post:
- *     summary: Add review
- *     tags: [Reviews]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - rating
- *               - comment
- *             properties:
- *               rating:
- *                 type: number
- *               comment:
- *                 type: string
- *     responses:
- *       201:
- *         description: Review added
- */
-router.post('/:id/reviews', protect, createProductReview);
+// router.get('/favorites', protect, getUserFavorites); // Duplicate route removed if any
 
 /**
  * @swagger

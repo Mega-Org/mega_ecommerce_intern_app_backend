@@ -37,6 +37,15 @@ const productSchema = new mongoose.Schema({
         required: [true, 'Please add a main image']
     },
     images: [String], // List of additional images
+    video: {
+        type: String, // Optional video
+        required: false
+    },
+    isDeleted: {
+        type: Boolean,
+        default: false,
+        select: false // Hide by default
+    },
     category: {
         type: String
     },

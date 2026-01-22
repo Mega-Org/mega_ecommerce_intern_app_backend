@@ -18,25 +18,51 @@ if (isCloudinaryConfigured) {
 
     storage = new CloudinaryStorage({
         cloudinary: cloudinary,
-        params: {
-            folder: 'mega-ecommerce',
-            allowed_formats: ['jpg', 'png', 'jpeg', 'webp'],
-            transformation: [{ width: 500, height: 500, crop: 'limit' }],
-            public_id: (req, file) => {
-                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-                return file.fieldname + '-' + uniqueSuffix;
+        params: async (req, file) => {
+            // Determine folder based on context
+            let folder = 'mega-ecommerce/others';
+
+            // Check based on fieldname or route path if possible
+            if (req.baseUrl && req.baseUrl.includes('users')) {
+                folder = 'mega-ecommerce/users';
+            } else if (req.baseUrl && req.baseUrl.includes('products')) {
+                // If ID exists (update), we could use products/:id, but for consistency lets keep it simple
+                // New products don't have ID yet.
+                // For updates (PUT /:id), we could extract it, but let's stick to a unified folder as agreed.
+                folder = 'mega-ecommerce/products';
             }
+
+            // Handle Videos
+            if (file.mimetype.startsWith('video/')) {
+                return {
+                    folder: folder,
+                    resource_type: 'video',
+                    allowed_formats: ['mp4', 'mov', 'avi'],
+                    public_id: `${file.fieldname}-${Date.now()}`
+                };
+            }
+
+            // Handle Images (Force JPG + Optimize)
+            return {
+                folder: folder,
+                format: 'jpg', // Force JPG conversion for Flutter
+                public_id: `${file.fieldname}-${Date.now()}`,
+                transformation: [
+                    { width: 1080, crop: 'limit' }, // Resize if too big
+                    { quality: 'auto' }, // Intelligent compression
+                    { fetch_format: 'jpg' } // Ensure delivery as JPG
+                ]
+            };
         }
     });
 } else {
-    // Fallback options
     // Fallback options
     // Check for Vercel environment explicitly or Production
     const isServerless = process.env.VERCEL || process.env.NODE_ENV === 'production';
 
     if (!isServerless) {
         // Use local storage ONLY for local development (not on Vercel)
-        console.log('Using Local Storage for uploads (Cloudinary keys not set)');
+        console.log('Using Local Storage for uploads (Cloudinary keys missing)');
         storage = multer.diskStorage({
             destination(req, file, cb) {
                 cb(null, 'uploads/');
@@ -46,13 +72,20 @@ if (isCloudinaryConfigured) {
             },
         });
     } else {
-        // Use memory storage for production/serverless if Cloudinary is missing
-        // This prevents "ReadOnly" errors on Vercel
-        console.log('Using Memory Storage (Cloudinary keys not set & Serverless env detected)');
+        // ERROR: We should NOT use MemoryStorage fallback on Vercel anymore as it breaks the app (long strings).
+        // but we must provide SOMETHING to multer or it crashes.
+        console.error('FATAL: Cloudinary credentials missing in Production/Serverless environment.');
+        // We use memory storage purely to avoid startup crash, but controllers should likely block these requests.
         storage = multer.memoryStorage();
     }
 }
 
-const upload = multer({ storage: storage });
+// Limits: 50MB for video support
+const upload = multer({
+    storage: storage,
+    limits: {
+        fileSize: 50 * 1024 * 1024
+    }
+});
 
 module.exports = upload;
