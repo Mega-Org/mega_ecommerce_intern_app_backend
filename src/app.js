@@ -40,6 +40,7 @@ app.use('/api/requests', require('./routes/requestRoutes'));
 app.use('/api/info', require('./routes/infoRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/cart', require('./routes/cartRoutes'));
+app.use('/api/chat', require('./routes/chatRoutes'));
 
 // Base Route
 app.get('/', (req, res) => {

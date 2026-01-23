@@ -300,3 +300,19 @@ exports.updateFcmToken = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+// @desc    Get All Users (Admin)
+// @route   GET /api/users
+// @access  Private (Admin)
+exports.getAllUsers = async (req, res) => {
+    try {
+        const users = await User.find().select('-password -verificationCode -resetPasswordToken').sort({ createdAt: -1 });
+        res.json({
+            success: true,
+            count: users.length,
+            data: users
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};

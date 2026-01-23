@@ -225,7 +225,7 @@ router.delete('/:id', protect, authorize('admin', 'owner'), deleteProduct);
  *     responses:
  *       201:
  *         description: Review added
- *     tags: [Reviews]
+ *
  */
 router.post('/:id/reviews', protect, createProductReview);
 

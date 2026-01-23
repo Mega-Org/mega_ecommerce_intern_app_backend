@@ -19,13 +19,28 @@ const {
     updatePassword,
     getUserTypes,
     deleteUser,
-    updateFcmToken
+    updateFcmToken,
+    getAllUsers
 } = require('../controllers/userController');
 const { protect, authorize } = require('../middleware/auth');
 
 const upload = require('../config/upload'); // Import upload config
 
 const router = express.Router();
+
+/**
+ * @swagger
+ * /api/users:
+ *   get:
+ *     summary: Get all users (Admin)
+ *     tags: [Users - Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of all users
+ */
+router.get('/', protect, authorize('admin'), getAllUsers);
 
 /**
  * @swagger
