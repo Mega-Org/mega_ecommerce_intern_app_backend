@@ -1,5 +1,6 @@
 const { sendToUser, sendToTopic, sendToToken, getNotificationTypes } = require('../services/notificationService');
 const { NotificationTypes } = require('../utils/constants');
+const Notification = require('../models/Notification');
 
 // @desc    Get all notification types
 // @route   GET /api/notifications/types
@@ -53,11 +54,22 @@ exports.sendNotification = async (req, res) => {
         } else if (userId) {
             // Send to User
             response = await sendToUser(userId, title, message, notificationData);
+
+            // Save to Database for User
+            await Notification.create({
+                user: userId,
+                title,
+                message,
+                type: notificationData.type,
+                data: notificationData,
+                isRead: false
+            });
+
         } else {
             return res.status(400).json({ success: false, message: 'UserId, Topic, or Token required' });
         }
 
-        res.json({ success: true, message: 'Notification sent', response });
+        res.json({ success: true, message: 'Notification sent', response, data: notificationData });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
